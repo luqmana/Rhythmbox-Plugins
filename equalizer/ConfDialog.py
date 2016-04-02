@@ -28,6 +28,7 @@ ui_string="""
     <menu name="ControlMenu" action="Control"> 
       <placeholder name="PluginPlaceholder">
         <menuitem name="Equalizer" action="Equalize"/>
+        <menuitem name="Enable Equalizer" action="equalizer-enabled"/>
       </placeholder>
     </menu>
   </menubar>
@@ -133,14 +134,25 @@ class ConfDialog(object):
 
     def add_ui(self, shell):
         action_group = ActionGroup(shell, 'EqualizerActionGroup')
+
         action_group.add_action(func=self.show_ui,
             action_name='Equalize', label=_('_Equalizer'),
             action_type='app')
+
+        action_group.add_action(func=self.toggle_enabled,
+            action_name='equalizer-enabled', label=_("E_nable Equalizer"),
+            action_type='app',
+            action_value=self.conf.enabled,
+            action_state = ActionGroup.TOGGLE)
 
         self._appshell = ApplicationShell(shell)
         self._appshell.insert_action_group(action_group)
         self._appshell.add_app_menuitems(ui_string, 'EqualizerActionGroup')
         
+    def toggle_enabled(self, *args):
+        enabled = not self.conf.enabled
+        self.conf.change_enabled(enabled, self.eq)
+
     def show_ui(self, *args):
         self.read_presets()
         self.get_dialog().present()

@@ -17,10 +17,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
+
+import gi; gi.require_version('GConf', '2.0')
 from gi.repository import GConf, Gst
 
 EQUALIZER_GCONF_PREFIX = '/apps/rhythmbox/plugins/equalizer'
 EQUALIZER_PRESET = 'preset'
+EQUALIZER_ENABLED = 'enabled'
 
 class Config:
   def __init__(self):
@@ -43,6 +46,10 @@ class Config:
     if not self.gconf.dir_exists(EQUALIZER_GCONF_PREFIX + '/default'):
       for i in range(0, 10):
         self.gconf.set_float(self.make_path(self.gconf_keys[i], 'default'), self.config[i])
+
+    self.enabled = self.gconf.get_bool(EQUALIZER_GCONF_PREFIX+'/'+EQUALIZER_ENABLED)
+    if self.enabled is None:
+      self.enabled = True
 
     if self.gconf.get_string(EQUALIZER_GCONF_PREFIX+'/'+EQUALIZER_PRESET):
       self.preset = self.gconf.get_string(EQUALIZER_GCONF_PREFIX+'/'+EQUALIZER_PRESET)
@@ -70,14 +77,23 @@ class Config:
         self.config[i] = self.read_value(preset, self.gconf_keys[i], self.config[i])
 
   def apply_settings(self, eq):
-    for i in range(0, 10):
-      eq.set_property('band' + repr(i), self.config[i])
+    import sys
+    if self.enabled:
+      for i in range(0, 10):
+        eq.set_property('band' + repr(i), self.config[i])
+    else:
+      for i in range(0, 10):
+        eq.set_property('band' + repr(i), 0.0)
 
   def write_settings(self):
     preset = self.preset
     self.gconf.set_string(EQUALIZER_GCONF_PREFIX+'/'+EQUALIZER_PRESET, preset)
+    self._write_enabled()
     for i in range(0, 10):
       self.gconf.set_float(self.make_path(self.gconf_keys[i], preset), self.config[i])
+
+  def _write_enabled(self):
+    self.gconf.set_bool(EQUALIZER_GCONF_PREFIX+'/'+EQUALIZER_ENABLED, self.enabled)
 
   def make_path(self, path, preset):
     return EQUALIZER_GCONF_PREFIX+'/' + preset + '/' + path
@@ -94,23 +110,23 @@ class Config:
       #gc.set_float(path, default)
     return rv
 
+  def change_enabled(self, enabled, eq):
+    self.enabled = enabled
+    self.apply_settings(eq)
+    self._write_enabled()
+
   def change_preset(self, new_preset, eq):
-    if new_preset:
-      m_preset = self.mangle(new_preset)
-    else:
+    if not new_preset:
       return
 
-    if self.preset_exists(m_preset):
-      self.preset = self.mangle(m_preset)
+    self.preset = self.mangle(new_preset)
+
+    if self.preset_exists(self.preset):
       self.read_settings(self.preset)
       self.apply_settings(eq)
     else:
       Gst.Preset.load_preset(eq, new_preset)
-      self.gconf.set_string(EQUALIZER_GCONF_PREFIX+'/'+EQUALIZER_PRESET, m_preset)
-      self.config = list(eq.get_property('band' + str(i)) for i in range(0,10))
-      for i in range(0, 10):
-        self.gconf.set_float(self.make_path(self.gconf_keys[i], m_preset), self.config[i]) 
-      self.preset = self.mangle(m_preset)
+      self.write_settings()
 
   def preset_exists(self, preset):
     return self.gconf.dir_exists(self.mangle(EQUALIZER_GCONF_PREFIX + '/' + preset))

@@ -461,6 +461,7 @@ class ActionGroup(object):
         key value of "action_type" is the RB2.99 Gio.Action type ("win" or "app")
            by default it assumes all actions are "win" type
         key value of "action_state" determines what action state to create
+        key value of "action_value" determines initial action value for the TOGGLE type
         '''
         if 'label' in args:
             label = args['label']
@@ -475,11 +476,13 @@ class ActionGroup(object):
         state = ActionGroup.STANDARD            
         if 'action_state' in args:
             state = args['action_state']
+
+        action_value = args.get('action_value', False)
         
         if is_rb3(self.shell):
             if state == ActionGroup.TOGGLE:
                 action = Gio.SimpleAction.new_stateful(action_name, None,
-                                               GLib.Variant('b', False))
+                                               GLib.Variant('b', action_value))
             else:
                 action = Gio.SimpleAction.new(action_name, None)
 
@@ -508,6 +511,7 @@ class ActionGroup(object):
                 action = Gtk.ToggleAction(label=label,
                     name=action_name,
                    tooltip='', stock_id=stock_id)
+                action.set_active(action_value)
             else:
                 action = Gtk.Action(label=label,
                     name=action_name,
