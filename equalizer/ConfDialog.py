@@ -139,9 +139,10 @@ class ConfDialog(object):
             action_name='Equalize', label=_('_Equalizer'),
             action_type='app')
 
-        action_group.add_action(func=self.toggle_enabled,
+        action_group.add_action_with_accel(func=self.toggle_enabled,
             action_name='equalizer-enabled', label=_("E_nable Equalizer"),
             action_type='app',
+            accel='<ctrl>e',
             action_value=self.conf.enabled,
             action_state = ActionGroup.TOGGLE)
 
